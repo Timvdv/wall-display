@@ -35,6 +35,8 @@ grep -i touch /proc/bus/input/devices
 ```
 
 **Record tap:**
+Make sure to set the `event4` to the event you see in the previous command
+
 ```bash
 sudo evemu-record /dev/input/event4 > tap.txt
 ```
