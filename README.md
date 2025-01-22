@@ -22,7 +22,7 @@ Control Raspberry Pi touchscreen wake behavior and brightness through automated 
 Edit kernel parameters:
 ```bash
 sudo nano /boot/firmware/cmdline.txt
-# Remove/modify consoleblank=600
+# I've added at the end, so the screen automatically goes to sleep `consoleblank=600`
 sudo reboot
 ```
 
