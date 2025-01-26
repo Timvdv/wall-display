@@ -74,28 +74,99 @@ sudo pip3 install fastapi uvicorn
 
 **main.py:**
 ```python
-from fastapi import FastAPI, HTTPException
 import subprocess
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+import os
+import logging
 
 app = FastAPI()
-EVENT_DEV = "/dev/input/event4"
-TAP_FILE = "tap.txt"
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Use an absolute path for TAP_EVENT_FILE
+TAP_EVENT_FILE = os.path.join(os.path.dirname(__file__), "tap_event.txt")
+
+def run_evemu_play():
+    """
+    Background task to run evemu-play and send an Enter keypress.
+    """
+    try:
+        logger.info("Background task: Starting evemu-play subprocess.")
+
+        # Run the subprocess and send input using subprocess.run
+        result = subprocess.run(
+            ["sudo", "evemu-play", TAP_EVENT_FILE],
+            input=b'\n',  # Send the Enter keypress
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=5  # Adjust the timeout as needed
+        )
+
+        if result.returncode != 0:
+            error_message = result.stderr.decode().strip()
+            logger.error(f"Background task: evemu-play failed with return code {result.returncode}: {error_message}")
+        else:
+            logger.info("Background task: evemu-play executed successfully.")
+
+    except subprocess.TimeoutExpired:
+        logger.error("Background task: evemu-play subprocess timed out.")
+    except Exception as e:
+        logger.error(f"Background task: Unexpected error: {str(e)}")
 
 @app.get("/wake")
-async def wake():
-    try:
-        with open(TAP_FILE, "rb") as f:
-            subprocess.run(["sudo", "evemu-play", EVENT_DEV], input=f.read(), check=True)
-        return {"status": "Screen awakened"}
-    except Exception as e:
-        raise HTTPException(500, str(e))
+async def wake_screen(background_tasks: BackgroundTasks):
+    """
+    Endpoint to wake the screen by simulating a tap.
+    """
+    logger.info("API: Received request to wake the screen.")
+
+    # Add the background task
+    background_tasks.add_task(run_evemu_play)
+
+    # Return success immediately
+    return {"status": "Screen wake command initiated."}
 
 @app.get("/brightness/{level}")
 async def set_brightness(level: int):
-    if 0 <= level <= 100:
-        subprocess.run(["rpi-backlight", "-b", str(level)], check=True)
-        return {"brightness": level}
-    raise HTTPException(400, "Invalid brightness (0-100)")
+    """
+    Endpoint to set the screen brightness.
+    """
+    if level < 0 or level > 100:
+        logger.warning(f"API: Invalid brightness level requested: {level}")
+        raise HTTPException(status_code=400, detail="Brightness must be between 0 and 100.")
+
+    try:
+        logger.info(f"API: Setting brightness to {level}.")
+        command = ["rpi-backlight", "-b", str(level)]
+
+        # Run the subprocess without waiting for it to complete
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=5  # Adjust the timeout as needed
+        )
+
+        if result.returncode != 0:
+            error_message = result.stderr.decode().strip()
+            logger.error(f"API: rpi-backlight failed with return code {result.returncode}: {error_message}")
+            raise HTTPException(status_code=500, detail=error_message)
+
+        logger.info(f"API: Brightness set to {level} successfully.")
+        return {
+            "status": "Brightness set",
+            "level": level,
+            "output": result.stdout.decode().strip()
+        }
+
+    except subprocess.TimeoutExpired:
+        logger.error("API: rpi-backlight subprocess timed out.")
+        raise HTTPException(status_code=500, detail="Brightness adjustment timed out.")
+    except Exception as e:
+        logger.error(f"API: Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 ```
 
 **Sudoers config:**
