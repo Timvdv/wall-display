@@ -34,6 +34,11 @@ sudo reboot
 grep -i touch /proc/bus/input/devices
 ```
 
+You can dive deeper with this command, in my case `Goodix Capacitive TouchScreen` was the name of the touch screen i'm using listed above
+```bash
+grep -i -A 5 "Goodix Capacitive TouchScreen" /proc/bus/input/devices
+```
+
 **Record tap:**
 Make sure to set the `event4` to the event you see in the previous command
 
