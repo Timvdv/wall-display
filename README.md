@@ -43,12 +43,12 @@ grep -i -A 5 "Goodix Capacitive TouchScreen" /proc/bus/input/devices
 Make sure to set the `event4` to the event you see in the previous command
 
 ```bash
-sudo evemu-record /dev/input/event4 > tap.txt
+sudo evemu-record /dev/input/event4 > tap_event.txt
 ```
 
 **Replay tap:**
 ```bash
-sudo evemu-play /dev/input/event4 < tap.txt
+sudo evemu-play /dev/input/event4 < tap_event.txt
 ```
 
 ---
