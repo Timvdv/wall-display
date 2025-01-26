@@ -231,10 +231,13 @@ WantedBy=multi-user.target
 Create `~/Desktop/Kiosk.desktop`:
 ```ini
 [Desktop Entry]
-Name=Launch Kiosk
-Exec=chromium-browser --kiosk http://your-url
+Name=Start Kiosk
+Comment=Launch Chromium in kiosk mode without cursor
+Exec=bash -c "unclutter --start-hidden & xsetroot -cursor_name none; chromium-browser --kiosk --disable-infobars --disable-restore-session-state --noerrdialogs --force-dark-mode --enable-features=WebUIDarkMode 'http://your-dashboard-url/wallmount?kiosk'"
 Icon=chromium
+Terminal=false
 Type=Application
+Categories=Utility;
 ```
 
 ---
